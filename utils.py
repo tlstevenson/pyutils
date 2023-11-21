@@ -15,12 +15,15 @@ import colorsys
 def is_scalar(x):
     return np.ndim(x) == 0
 
+def convert_to_multiple(value, factor, direction='nearest'):
 
-def convert_to_multiple(value, factor, round_up=True):
-    if round_up:
-        return factor * np.ceil(value/factor)
-    else:
-        return factor * np.floor(value/factor)
+    match direction:
+        case 'nearest':
+            return factor * np.round(value/factor)
+        case 'up':
+            return factor * np.ceil(value/factor)
+        case 'down':
+            return factor * np.floor(value/factor)
 
 
 def stderr(x, axis=0, ignore_nan=True):
@@ -68,7 +71,7 @@ def lighten_color(color, amount=0.5):
     >> lighten_color('#F034A3', 0.6)
     >> lighten_color((.3,.55,.1), 0.5)
     """
-    
+
     try:
         c = mc.cnames[color]
     except:
