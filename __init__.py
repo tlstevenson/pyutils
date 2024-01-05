@@ -1,4 +1,7 @@
 import sys
 from os import path
 
-sys.path.append(path.dirname(path.abspath(__file__))) # Adds the repo directory to find modules within this repo
+this_dir = path.dirname(path.abspath(__file__))
+
+if not this_dir in sys.path:
+    sys.path.append(this_dir)

@@ -26,6 +26,10 @@ def convert_to_multiple(value, factor, direction='nearest'):
             return factor * np.floor(value/factor)
 
 
+def to_int(x):
+    return np.round(x).astype(int)
+
+
 def stderr(x, axis=0, ignore_nan=True):
     ''' Calculates standard error '''
 
@@ -41,6 +45,18 @@ def stderr(x, axis=0, ignore_nan=True):
     se = std/np.sqrt(n)
     se[np.isinf(se)] = np.nan  # handle cases where n = 0
     return se
+
+def z_score(x):
+    ''' Calculates z_score over all values in x '''
+
+    # Flatten input to calculate z-score over all values in x
+    x = np.array(x)
+    flat_x = x.flatten()
+
+    flat_z = (flat_x - np.nanmean(flat_x))/np.nanstd(flat_x)
+
+    # reshape the z scores to match original x
+    return np.reshape(flat_z, x.shape)
 
 # %% OS utils
 def check_make_dir(full_path):
