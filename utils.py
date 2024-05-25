@@ -66,7 +66,7 @@ def binom_cis(k, n, level=0.95):
     else:
         k = int(k)
         n = int(n)
-    if n > 1 and k > 1:    
+    if n > 1 and k > 1:
         return np.array(binomtest(k, n).proportion_ci(confidence_level=level)[:])
     else:
         return np.array([np.nan, np.nan])
@@ -75,7 +75,7 @@ def get_sequence_lengths(x):
     ''' Get a list of lengths of repeated values in array indexed by value '''
     unique_vals = np.unique(x)
     lengths = {v: [] for v in unique_vals}
-    
+
     seq_len = 1
     for i in range(len(x)-1):
         if x[i] == x[i+1]:
@@ -84,7 +84,7 @@ def get_sequence_lengths(x):
         if x[i] != x[i+1] or i == len(x)-2:
             lengths[x[i]].append(seq_len)
             seq_len = 1
-            
+
     return lengths
 
 # %% OS utils
@@ -135,4 +135,4 @@ def is_dict(value):
     return isinstance(value, dict)
 
 def is_list(value):
-    return isinstance(value, list) or isinstance(value, np.ndarray)
+    return isinstance(value, list) or isinstance(value, tuple) or isinstance(value, np.ndarray)
