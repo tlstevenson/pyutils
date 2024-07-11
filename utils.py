@@ -44,7 +44,13 @@ def stderr(x, axis=0, ignore_nan=True):
         n = np.shape(x)[axis]
 
     se = std/np.sqrt(n)
-    se[np.isinf(se)] = np.nan  # handle cases where n = 0
+
+    # handle cases where n = 0
+    if is_list(se):
+        se[np.isinf(se)] = np.nan
+    elif np.isinf(se):
+        se = np.nan
+
     return se
 
 def z_score(x):
@@ -93,19 +99,34 @@ def check_make_dir(full_path):
     if not os.path.exists(path_dir):
         os.makedirs(path_dir)
 
-
 def get_user_home():
     return path.expanduser('~')
 
-## Object utils
-def flatten(lists):
+# %% Object utils
+
+def flatten(lists, recursive=True):
     ''' flattens a structure of lists '''
-    if is_dict(lists):
-        return [i for v in lists.values() for i in v]
-    elif is_list(lists) and is_list(lists[0]):
-        return [i for v in lists for i in v]
+    if recursive:
+        if is_dict(lists):
+            return flatten([i for v in lists.values() for i in v], recursive)
+        elif is_list(lists) and len(lists) > 0 and is_list(lists[0]):
+            return flatten([i for v in lists for i in v], recursive)
+        else:
+            return lists
     else:
-        return lists
+        if is_dict(lists):
+            return [i for v in lists.values() for i in v]
+        elif is_list(lists) and is_list(lists[0]):
+            return [i for v in lists for i in v]
+        else:
+            return lists
+
+
+def is_dict(value):
+    return isinstance(value, dict)
+
+def is_list(value):
+    return isinstance(value, list) or isinstance(value, tuple) or isinstance(value, np.ndarray)
 
 
 # %% Plot utils
@@ -128,11 +149,3 @@ def lighten_color(color, amount=0.5):
         c = color
     c = np.array(colorsys.rgb_to_hls(*mc.to_rgb(c)))
     return colorsys.hls_to_rgb(c[0], 1-amount * (1-c[1]), c[2])
-
-# %% Other utils
-
-def is_dict(value):
-    return isinstance(value, dict)
-
-def is_list(value):
-    return isinstance(value, list) or isinstance(value, tuple) or isinstance(value, np.ndarray)
