@@ -11,6 +11,7 @@ import os.path as path
 import matplotlib.colors as mc
 import colorsys
 from scipy.stats import binomtest
+import warnings
 
 # %% Number utils
 def is_scalar(x):
@@ -30,26 +31,31 @@ def convert_to_multiple(value, factor, direction='nearest'):
 def to_int(x):
     return np.round(x).astype(int)
 
+def nancount(x, axis=0):
+    return np.sum(~np.isnan(x), axis=axis)
 
 def stderr(x, axis=0, ignore_nan=True):
     ''' Calculates standard error '''
 
     x = np.array(x)
+    # ignore warnings from all nans in x
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', category=RuntimeWarning)
 
-    if ignore_nan:
-        std = np.nanstd(x, axis)
-        n = np.sum(np.logical_not(np.isnan(x)), axis)
-    else:
-        std = np.std(x, axis)
-        n = np.shape(x)[axis]
+        if ignore_nan:
+            std = np.nanstd(x, axis=axis, ddof=1)
+            n = nancount(x, axis=axis)
+        else:
+            std = np.std(x, axis=axis, ddof=1)
+            n = np.shape(x)[axis]
 
-    se = std/np.sqrt(n)
+        se = std/np.sqrt(n)
 
-    # handle cases where n = 0
-    if is_list(se):
-        se[np.isinf(se)] = np.nan
-    elif np.isinf(se):
-        se = np.nan
+        # handle cases where n = 0
+        if is_list(se):
+            se[np.isinf(se)] = np.nan
+        elif np.isinf(se):
+            se = np.nan
 
     return se
 
@@ -59,8 +65,11 @@ def z_score(x):
     # Flatten input to calculate z-score over all values in x
     x = np.array(x)
     flat_x = x.flatten()
+    # ignore warnings from all nans in x
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', category=RuntimeWarning)
 
-    flat_z = (flat_x - np.nanmean(flat_x))/np.nanstd(flat_x)
+        flat_z = (flat_x - np.nanmean(flat_x))/np.nanstd(flat_x)
 
     # reshape the z scores to match original x
     return np.reshape(flat_z, x.shape)
