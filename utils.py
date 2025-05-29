@@ -12,6 +12,8 @@ import matplotlib.colors as mc
 import colorsys
 from scipy.stats import binomtest
 import warnings
+from math import gcd
+
 
 # %% Number utils
 def is_scalar(x):
@@ -74,6 +76,18 @@ def z_score(x):
     # reshape the z scores to match original x
     return np.reshape(flat_z, x.shape)
 
+def rescale(x, new_min, new_max, axis=None):
+    # if an axis is specified, need to create the axis array to compute the min/max over
+    if axis is None:
+        ax_arr = None
+    else:
+        ax_arr = np.arange(len(x.shape)).astype(int)
+        ax_arr = tuple(ax_arr[ax_arr != axis])
+        
+    old_min = np.broadcast_to(np.min(x, axis=ax_arr, keepdims=True), x.shape)
+    old_max = np.broadcast_to(np.max(x, axis=ax_arr, keepdims=True), x.shape)
+    return new_min + (x - old_min) * (new_max - new_min) / (old_max - old_min)
+
 def binom_cis(k, n, level=0.95):
     # handle non-integer values
     if k % 1 != 0 or n % 1 != 0:
@@ -81,7 +95,7 @@ def binom_cis(k, n, level=0.95):
     else:
         k = int(k)
         n = int(n)
-    if n > 1 and k > 1:
+    if n > 0:
         return np.array(binomtest(k, n).proportion_ci(confidence_level=level)[:])
     else:
         return np.array([np.nan, np.nan])
@@ -101,6 +115,10 @@ def get_sequence_lengths(x):
             seq_len = 1
 
     return lengths
+
+def lcm(x, y):
+    # get the least common multiple of two numbers
+    return x * y // gcd(x, y)
 
 # %% OS utils
 def check_make_dir(full_path):
@@ -137,11 +155,23 @@ def is_dict(value):
 def is_list(value):
     return isinstance(value, list) or isinstance(value, tuple) or isinstance(value, np.ndarray)
 
+def get_all_combinations(*items):
+    ''' Gets all possible combinations of the elements in the provided 1 dimensional item lists '''
+    
+    # Create a meshgrid from the input arrays
+    mesh = np.meshgrid(*items, indexing='ij')
+    
+    # Stack and reshape to get a 2D array of combinations
+    combos = np.stack(mesh, axis=-1).reshape(-1, len(items))
+    
+    return combos
 
 # %% Plot utils
-def lighten_color(color, amount=0.5):
+
+def change_color_lightness(color, mult):
     """
-    Lightens the given color by multiplying (1-luminosity) by the given amount.
+    Lightens or darkens the given color by changing the the current lightness by the given multiplier (from -1 to 1).
+    To lighten the color, the multiplier should be positive, to darken it should be negative. 
     Input can be matplotlib color string, hex string, or RGB tuple.
 
     From: https://gist.github.com/technic/8bf3932ad7539b762a05da11c0093ed5
@@ -157,4 +187,10 @@ def lighten_color(color, amount=0.5):
     except:
         c = color
     c = np.array(colorsys.rgb_to_hls(*mc.to_rgb(c)))
-    return colorsys.hls_to_rgb(c[0], 1-amount * (1-c[1]), c[2])
+    
+    if mult > 0: # lighten, send closer to 1
+        new_l = c[1] + mult*(1-c[1])
+    else: # darken, send closer to 0
+        new_l = c[1] + mult*c[1]
+        
+    return colorsys.hls_to_rgb(c[0], new_l, c[2])
