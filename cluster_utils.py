@@ -32,7 +32,7 @@ def push_to_cluster(local_path, cluster_path):
 
     print('Pushing from {} to {}'.format(local_path, cluster_path))
     
-    cmd = 'rsync --archive --one-file-system --info=progress2 {} {}:{}'.format(local_path, config['con'], cluster_path)
+    cmd = 'scp -rp {} {}:{}'.format(local_path, config['con'], cluster_path)
     
     status, output = run_local_command(cmd)
     if status != 0:
@@ -54,7 +54,7 @@ def pull_from_cluster(cluster_path, local_path):
     
     print('Pushing from {} to {}'.format(local_path, cluster_path))
     
-    cmd = 'rsync --archive --one-file-system --info=progress2 {}:{} {}'.format(config['con'], cluster_path, local_path)
+    cmd = 'scp -rp {}:{} {}'.format(config['con'], cluster_path, local_path)
     
     status, output = run_local_command(cmd)
     if status != 0:
@@ -83,6 +83,14 @@ def folder_exists(folder_path):
     else:
         print('Error: {}'.format(output))
         return 'error'
+
+def run_slurm_job(slurm_path, custom_args=None, print_out=True):
+    config = __get_cluster_config()
+    if custom_args is None:
+        cmd = 'bash --login -c \'sbatch --mail-user={} {}\''.format(config['email'], slurm_path)
+    else:
+        cmd = 'bash --login -c \'sbatch --mail-user={} --export=ALL,{} {}\''.format(config['email'], custom_args, slurm_path)
+    return run_command(cmd, print_out)
 
 def run_command(cmd, print_out=True):
     config = __get_cluster_config()
