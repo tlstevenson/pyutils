@@ -105,6 +105,7 @@ def run_local_command(cmd, print_out=True):
         
         return result.returncode, result.stdout + '\n' + result.stderr
     except Exception as e:
+        print(str(e))
         return 1, str(e)
 
 # %% Cluster connection manager
