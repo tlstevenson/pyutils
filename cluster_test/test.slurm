@@ -5,14 +5,12 @@
 #SBATCH -p low
 #SBATCH --account=thanksgrp
 #SBATCH --qos=cnsdept-low-qos
-#SBATCH -o /group/thanksgrp/code/modeling/cluster/log/testBatch_%j.txt
+#SBATCH -o /group/thanksgrp/python/test/log/testBatch_%A.txt
 #SBATCH --mail-type=ALL
+#SBATCH --array=1-2
 
-module load conda
-conda activate /group/thanksgrp/envs/ml_env
-
-# Move to working directory
-cd /group/thanksgrp/code/modeling/cluster
+LOGDIR=/group/thanksgrp/python/test/log/$SLURM_ARRAY_JOB_ID
+mkdir -p $LOGDIR
 
 if test -z "$CUSTOMSTRING"
 then
@@ -32,4 +30,11 @@ echo "CUSTOMSTRING = " $CUSTOMSTRING
 echo "CUSTOMNUM = " $CUSTOMNUM
 
 # Run Python script
-python Test_Cluster.py $CUSTOMSTRING $CUSTOMNUM
+
+module load conda
+conda activate /group/thanksgrp/envs/neuropy
+
+# save absolute path to python executable
+PYTHON=$(which python)
+
+srun -n 1 -o $LOGDIR/test_%a.txt $PYTHON /group/thanksgrp/python/code/pyutils/cluster_test/test_cluster.py --config_path $CUSTOMSTRING --custom_num $CUSTOMNUM

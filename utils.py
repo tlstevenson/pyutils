@@ -34,7 +34,7 @@ def to_int(x):
     return np.round(x).astype(int)
 
 def nancount(x, axis=0):
-    return np.sum(~np.isnan(x), axis=axis)
+    return np.sum(~np.isnan(x), axis=axis).astype(float)
 
 def stderr(x, axis=0, ignore_nan=True):
     ''' Calculates standard error '''
@@ -47,18 +47,59 @@ def stderr(x, axis=0, ignore_nan=True):
         if ignore_nan:
             std = np.nanstd(x, axis=axis, ddof=1)
             n = nancount(x, axis=axis)
+            n[n == 0] = np.nan
         else:
             std = np.std(x, axis=axis, ddof=1)
             n = np.shape(x)[axis]
 
         se = std/np.sqrt(n)
 
-        # handle cases where n = 0
-        if is_list(se):
-            se[np.isinf(se)] = np.nan
-        elif np.isinf(se):
-            se = np.nan
+    return se
 
+def weighted_mean(x, weights, axis=0):
+    ''' Calculates a weighted mean '''
+    
+    x = np.array(x)
+    # ignore warnings from all nans in x
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', category=RuntimeWarning)
+
+        n = np.nansum(weights, axis=axis)
+        n[n == 0] = np.nan
+        mean = np.nansum(weights*x, axis=axis)/n
+    
+    return mean
+
+def weighted_std(x, weights, axis=0):
+    ''' Calculates a weighted standard deviation '''
+    
+    x = np.array(x)
+    # ignore warnings from all nans in x
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', category=RuntimeWarning)
+
+        mean = weighted_mean(x, weights, axis=axis)
+        n = np.nansum(weights, axis=axis)
+        n[n == 0] = np.nan
+        
+        std = np.sqrt(np.nansum(weights * (x - mean[..., np.newaxis])**2, axis=axis)/(n-1))
+
+    return std
+
+def weighted_se(x, weights, axis=0):
+    ''' Calculates a weighted standard error '''
+    
+    x = np.array(x)
+    # ignore warnings from all nans in x
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', category=RuntimeWarning)
+
+        std = weighted_std(x, weights, axis=axis)
+        n = np.nansum(weights, axis=axis)
+        n[n == 0] = np.nan
+        
+        se = std/np.sqrt(n)
+    
     return se
 
 def z_score(x):

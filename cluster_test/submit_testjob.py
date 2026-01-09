@@ -10,13 +10,14 @@ import json
 #%% create and push unique config file to cluster
 
 current_datetime = datetime.now().strftime("%Y%m%d_%H%M%S")
-config_name = f"bandit_config_{current_datetime}.json"
+config_name = f"config_{current_datetime}.json"
 
 # Create the config dictionary that stores data
-config_data = {'test': True}
+config_data = {'test': True,
+               'number': 1}
 # define local and cluster path
-local_path = path.join(utils.get_user_home(), 'bandit_modeling', 'configs')
-remote_path= '/group/thanksgrp/code/modeling/cluster/configs'
+local_path = path.join(utils.get_user_home(), 'model_fits', 'test', 'configs')
+remote_path = '/group/thanksgrp/python/test/configs'
 
 # save config file locally
 config_path = path.join(local_path, config_name)
@@ -28,8 +29,8 @@ clust.push_to_cluster(config_path, remote_path)
 
 #%% Run sbatch command
 
-slurm_path = '/group/thanksgrp/code/modeling/cluster/test.slurm'
-args = 'CUSTOMSTRING=\'{}\''.format(config_name)
+slurm_path = '/group/thanksgrp/python/code/pyutils/cluster_test/test.slurm'
+args = 'CUSTOMSTRING=\'{}\',CUSTOMNUM=2'.format(remote_path+'/'+config_name)
 
 # 3. Run sbatch on the cluster
 print("Submitting job to SLURM")

@@ -10,8 +10,15 @@ Created on Thu Apr 24 10:14:47 2025
 from os import path
 import json
 import subprocess
+import sys
 
 # %% Commands to interact with cluster through python instead of the command line
+
+def on_cluster():
+    return sys.platform == 'linux'
+
+def clean_cluster_path(cluster_path):
+    return cluster_path.replace('\\', '/')
 
 def push_to_cluster(local_path, cluster_path):
     '''
@@ -27,6 +34,8 @@ def push_to_cluster(local_path, cluster_path):
     '''
     config = __get_cluster_config()
     
+    cluster_path = clean_cluster_path(cluster_path)
+    
     if not folder_exists(cluster_path):
         run_command('mkdir -p {}'.format(cluster_path), print_out=False)
 
@@ -34,7 +43,7 @@ def push_to_cluster(local_path, cluster_path):
     
     cmd = 'scp -rp {} {}:{}'.format(local_path, config['con'], cluster_path)
     
-    status, output = run_local_command(cmd)
+    status, output = run_local_command(cmd, print_out=False)
     if status != 0:
         print('status: {}. output: {}'.format(status, output))
 
@@ -52,17 +61,22 @@ def pull_from_cluster(cluster_path, local_path):
     '''
     config = __get_cluster_config()
     
+    cluster_path = clean_cluster_path(cluster_path)
+    
     print('Pushing from {} to {}'.format(local_path, cluster_path))
     
     cmd = 'scp -rp {}:{} {}'.format(config['con'], cluster_path, local_path)
     
-    status, output = run_local_command(cmd)
+    status, output = run_local_command(cmd, print_out=False)
     if status != 0:
         print('status: {}. output: {}'.format(status, output))
 
 def file_exists(file_path):
+    
+    file_path = clean_cluster_path(file_path)
+    
     cmd = 'test -f {} && echo true || echo false'.format(file_path)
-    status, output = run_command(cmd)
+    status, output = run_command(cmd, print_out=False)
     output = output.strip()
     if output == 'true':
         return True
@@ -73,8 +87,11 @@ def file_exists(file_path):
         return 'error'
 
 def folder_exists(folder_path):
+    
+    folder_path = clean_cluster_path(folder_path)
+    
     cmd = 'test -d {} && echo true || echo false'.format(folder_path)
-    status, output = run_command(cmd)
+    status, output = run_command(cmd, print_out=False)
     output = output.strip()
     if output == 'true':
         return True
@@ -83,13 +100,30 @@ def folder_exists(folder_path):
     else:
         print('Error: {}'.format(output))
         return 'error'
+    
+def get_all_files(folder_path):
+    
+    folder_path = clean_cluster_path(folder_path)
+    
+    cmd = 'ls {}'.format(folder_path)
+    status, output = run_command(cmd, print_out=False)
+    output = output.strip().split('\n')
+    
+    if status == 0:
+        return output
+    else:
+        print('Error: {}'.format(output))
+        return 'error'
 
-def run_slurm_job(slurm_path, custom_args=None, print_out=True):
+def run_slurm_job(slurm_path, sbatch_options='', custom_args=None, print_out=True):
+    
+    slurm_path = clean_cluster_path(slurm_path)
+    
     config = __get_cluster_config()
     if custom_args is None:
-        cmd = 'bash --login -c \'sbatch --mail-user={} {}\''.format(config['email'], slurm_path)
+        cmd = "bash --login -c 'sbatch --mail-user={} {} {}'".format(config['email'], sbatch_options, slurm_path)
     else:
-        cmd = 'bash --login -c \'sbatch --mail-user={} --export=ALL,{} {}\''.format(config['email'], custom_args, slurm_path)
+        cmd = "bash --login -c 'sbatch --mail-user={} {} --export={} {}'".format(config['email'], sbatch_options, custom_args, slurm_path)
     return run_command(cmd, print_out)
 
 def run_command(cmd, print_out=True):
