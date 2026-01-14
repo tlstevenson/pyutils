@@ -41,7 +41,9 @@ def push_to_cluster(local_path, cluster_path):
 
     print('Pushing from {} to {}'.format(local_path, cluster_path))
     
-    cmd = 'scp -rp {} {}:{}'.format(local_path, config['con'], cluster_path)
+
+    cmd = 'rsync --archive --one-file-system --progress {} {}:{}'.format(local_path, config['con'], cluster_path)
+
     
     status, output = run_local_command(cmd, print_out=False)
     if status != 0:
@@ -65,9 +67,10 @@ def pull_from_cluster(cluster_path, local_path):
     
     print('Pushing from {} to {}'.format(local_path, cluster_path))
     
-    cmd = 'scp -rp {}:{} {}'.format(config['con'], cluster_path, local_path)
-    
-    status, output = run_local_command(cmd, print_out=False)
+
+    cmd = 'rsync --archive --one-file-system --info=progress2 {} {}:{}'.format(local_path, config['con'], cluster_path)
+    status, output = run_local_command(cmd)
+
     if status != 0:
         print('status: {}. output: {}'.format(status, output))
 
