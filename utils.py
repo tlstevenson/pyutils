@@ -47,7 +47,10 @@ def stderr(x, axis=0, ignore_nan=True):
         if ignore_nan:
             std = np.nanstd(x, axis=axis, ddof=1)
             n = nancount(x, axis=axis)
-            n[n == 0] = np.nan
+            if is_list(n):
+                n[n == 0] = np.nan
+            elif n == 0:
+                n = np.nan
         else:
             std = np.std(x, axis=axis, ddof=1)
             n = np.shape(x)[axis]
@@ -56,7 +59,7 @@ def stderr(x, axis=0, ignore_nan=True):
 
     return se
 
-def weighted_mean(x, weights, axis=0):
+def weighted_mean(x, weights, axis=0, keepdims=False):
     ''' Calculates a weighted mean '''
     
     x = np.array(x)
@@ -64,13 +67,18 @@ def weighted_mean(x, weights, axis=0):
     with warnings.catch_warnings():
         warnings.simplefilter('ignore', category=RuntimeWarning)
 
-        n = np.nansum(weights, axis=axis)
-        n[n == 0] = np.nan
-        mean = np.nansum(weights*x, axis=axis)/n
-    
-    return mean
+        mask = ~np.isnan(x)
+        num = np.nansum(weights*x, axis=axis, keepdims=keepdims)
+        denom = np.nansum(weights*mask, axis=axis, keepdims=keepdims)
+        
+        if is_list(denom):
+            denom[denom == 0] = np.nan
+        elif denom == 0:
+            denom = np.nan
+        
+    return num/denom
 
-def weighted_std(x, weights, axis=0):
+def weighted_std(x, weights, axis=0, keepdims=False):
     ''' Calculates a weighted standard deviation '''
     
     x = np.array(x)
@@ -78,15 +86,24 @@ def weighted_std(x, weights, axis=0):
     with warnings.catch_warnings():
         warnings.simplefilter('ignore', category=RuntimeWarning)
 
-        mean = weighted_mean(x, weights, axis=axis)
-        n = np.nansum(weights, axis=axis)
-        n[n == 0] = np.nan
+        mask = ~np.isnan(x)
+        mean = weighted_mean(x, weights, axis=axis, keepdims=True)
+
+        num = np.nansum(weights * (x - mean)**2, axis=axis, keepdims=keepdims)
         
-        std = np.sqrt(np.nansum(weights * (x - mean[..., np.newaxis])**2, axis=axis)/(n-1))
+        # calculate the degree of freedom correction
+        w_mask = weights * mask
+        w_sum = np.nansum(w_mask, axis=axis, keepdims=keepdims)
+        if is_list(w_sum):
+            w_sum[w_sum == 0] = np.nan
+        elif w_sum == 0:
+            w_sum = np.nan
+        w_sq_sum = np.nansum(w_mask**2, axis=axis, keepdims=keepdims)
+        denom = w_sum - (w_sq_sum / w_sum)
 
-    return std
+    return np.sqrt(num/denom)
 
-def weighted_se(x, weights, axis=0):
+def weighted_se(x, weights, axis=0, keepdims=False):
     ''' Calculates a weighted standard error '''
     
     x = np.array(x)
@@ -94,28 +111,31 @@ def weighted_se(x, weights, axis=0):
     with warnings.catch_warnings():
         warnings.simplefilter('ignore', category=RuntimeWarning)
 
-        std = weighted_std(x, weights, axis=axis)
-        n = np.nansum(weights, axis=axis)
-        n[n == 0] = np.nan
+        std = weighted_std(x, weights, axis=axis, keepdims=keepdims)
         
-        se = std/np.sqrt(n)
-    
-    return se
+        mask = ~np.isnan(x)
+        w_mask = weights * mask
+        w_sum = np.nansum(w_mask, axis=axis, keepdims=keepdims)
+        w_sq_sum = np.nansum(w_mask**2, axis=axis, keepdims=keepdims)
+        if is_list(w_sq_sum):
+            w_sq_sum[w_sq_sum == 0] = np.nan
+        elif w_sq_sum == 0:
+            w_sq_sum = np.nan
+        
+    return std/np.sqrt(w_sum**2 / w_sq_sum)
 
-def z_score(x):
-    ''' Calculates z_score over all values in x '''
+def z_score(x, axis=0):
+    ''' Calculates z_score over x '''
 
     # Flatten input to calculate z-score over all values in x
     x = np.array(x)
-    flat_x = x.flatten()
     # ignore warnings from all nans in x
     with warnings.catch_warnings():
         warnings.simplefilter('ignore', category=RuntimeWarning)
 
-        flat_z = (flat_x - np.nanmean(flat_x))/np.nanstd(flat_x)
+        z = (x - np.nanmean(x, axis=axis, keepdims=True))/np.nanstd(x, axis=axis, keepdims=True)
 
-    # reshape the z scores to match original x
-    return np.reshape(flat_z, x.shape)
+    return z
 
 def rescale(x, new_min, new_max, axis=None):
     # if an axis is specified, need to create the axis array to compute the min/max over
